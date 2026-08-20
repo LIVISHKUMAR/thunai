@@ -1,0 +1,18 @@
+FROM eclipse-temurin:21-jdk-alpine
+WORKDIR /app
+COPY pom.xml .
+COPY thunai-common/pom.xml thunai-common/
+COPY thunai-gateway/pom.xml thunai-gateway/
+COPY thunai-tenant-service/pom.xml thunai-tenant-service/
+COPY thunai-order-service/pom.xml thunai-order-service/
+COPY thunai-customer-service/pom.xml thunai-customer-service/
+COPY thunai-notification-service/pom.xml thunai-notification-service/
+COPY thunai-common/src thunai-common/src
+COPY thunai-gateway/src thunai-gateway/src
+COPY thunai-tenant-service/src thunai-tenant-service/src
+COPY thunai-order-service/src thunai-order-service/src
+COPY thunai-customer-service/src thunai-customer-service/src
+COPY thunai-notification-service/src thunai-notification-service/src
+COPY pom.xml .
+RUN apk add --no-cache maven && mvn -q -DskipTests package
+CMD ["sh", "-c", "java -jar /app/thunai-${SERVICE_NAME:-gateway}-*.jar"]

@@ -1,0 +1,203 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: thunai
+      POSTGRES_PASSWORD: thunai
+      POSTGRES_DB: thunai
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U thunai"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: thunai
+      RABBITMQ_DEFAULT_PASS: thunai
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  consul:
+    image: hashicorp/consul:1.19
+    restart: unless-stopped
+    ports:
+      - "8500:8500"
+      - "8600:8600/udp"
+    command: "agent -server -bootstrap-expect=1 -ui -client=0.0.0.0 -bind=0.0.0.0"
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.5
+    restart: unless-stopped
+    ports:
+      - "8085:8080"
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: dev-mem
+      KC_HTTP_RELATIVE_PATH: /
+    command: start-dev --import-realm
+
+  thunai-gateway:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.gateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_CLOUD_CONSUL_HOST: consul
+      DATABASE_URL: jdbc:postgresql://postgres:5432/thunai
+      DATABASE_USERNAME: thunai
+      DATABASE_PASSWORD: thunai
+      REDIS_HOST: redis
+      CONSUL_HOST: consul
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      consul:
+        condition: service_started
+
+  thunai-tenant-service:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.service
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DATABASE_URL: jdbc:postgresql://postgres:5432/thunai
+      DATABASE_USERNAME: thunai
+      DATABASE_PASSWORD: thunai
+      REDIS_HOST: redis
+      CONSUL_HOST: consul
+      SPRING_APPLICATION_NAME: thunai-tenant-service
+      SERVICE_NAME: tenant-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      consul:
+        condition: service_started
+
+  thunai-order-service:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.service
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DATABASE_URL: jdbc:postgresql://postgres:5432/thunai
+      DATABASE_USERNAME: thunai
+      DATABASE_PASSWORD: thunai
+      REDIS_HOST: redis
+      CONSUL_HOST: consul
+      SPRING_APPLICATION_NAME: thunai-order-service
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_USERNAME: thunai
+      SPRING_RABBITMQ_PASSWORD: thunai
+      SERVICE_NAME: order-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+      consul:
+        condition: service_started
+
+  thunai-customer-service:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.service
+    restart: unless-stopped
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DATABASE_URL: jdbc:postgresql://postgres:5432/thunai
+      DATABASE_USERNAME: thunai
+      DATABASE_PASSWORD: thunai
+      REDIS_HOST: redis
+      CONSUL_HOST: consul
+      SPRING_APPLICATION_NAME: thunai-customer-service
+      SERVICE_NAME: customer-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      consul:
+        condition: service_started
+
+  thunai-notification-service:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.service
+    restart: unless-stopped
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DATABASE_URL: jdbc:postgresql://postgres:5432/thunai
+      DATABASE_USERNAME: thunai
+      DATABASE_PASSWORD: thunai
+      REDIS_HOST: redis
+      CONSUL_HOST: consul
+      SPRING_APPLICATION_NAME: thunai-notification-service
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_USERNAME: thunai
+      SPRING_RABBITMQ_PASSWORD: thunai
+      SERVICE_NAME: notification-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+      consul:
+        condition: service_started
+
+  thunai-frontend:
+    build:
+      context: ./thunai-frontend
+      dockerfile: ../../infrastructure/docker/Dockerfile.frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - thunai-gateway
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:

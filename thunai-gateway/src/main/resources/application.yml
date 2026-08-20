@@ -1,0 +1,14 @@
+server.port=8080
+spring.application.name=thunai-gateway
+
+spring.cloud.consul.host=localhost
+spring.cloud.consul.port=8500
+spring.cloud.consul.discovery.service-name=thunai-gateway
+spring.cloud.consul.discovery.health-check-path=/actuator/health
+spring.cloud.consul.discovery.health-check-interval=10s
+
+spring.cloud.gateway.discovery.locator.enabled=true
+spring.cloud.gateway.discovery.locator.lowerCaseServiceId=true
+
+management.endpoints.web.exposure.include=health,info,metrics,prometheus
+management.endpoint.health.probes.enabled=true

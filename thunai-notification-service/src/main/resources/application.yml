@@ -1,0 +1,27 @@
+server.port=8084
+spring.application.name=thunai-notification-service
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.hibernate.ddl-auto=validate
+spring.jpa.open-in-view=false
+spring.datasource.url=${DATABASE_URL:jdbc:postgresql://localhost:5432/thunai}
+spring.datasource.username=${DATABASE_USERNAME:thunai}
+spring.datasource.password=${DATABASE_PASSWORD:thunai}
+spring.data.redis.host=${REDIS_HOST:localhost}
+spring.data.redis.port=6379
+spring.cloud.consul.host=${CONSUL_HOST:localhost}
+spring.cloud.consul.port=8500
+spring.cloud.consul.discovery.service-name=thunai-notification-service
+spring.cloud.consul.discovery.health-check-path=/actuator/health
+spring.cloud.consul.discovery.health-check-interval=10s
+management.endpoints.web.exposure.include=health,info,metrics,prometheus
+management.endpoint.health.probes.enabled=true
+springdoc.api-docs.path=/api-docs
+springdoc.swagger-ui.path=/swagger-ui.html
+# capcom6 SMS Gateway for Android (free, self-hosted) — https://github.com/capcom6/android-sms-gateway
+sms.gateway.enabled=${SMS_GATEWAY_ENABLED:false}
+sms.gateway.base-url=${SMS_GATEWAY_BASE_URL:https://api.sms-gate.app/3rdparty/v1}
+sms.gateway.send-path=${SMS_GATEWAY_SEND_PATH:/messages}
+sms.gateway.username=${SMS_GATEWAY_USERNAME:}
+sms.gateway.password=${SMS_GATEWAY_PASSWORD:}
+sms.gateway.sim-number=${SMS_GATEWAY_SIM_NUMBER:#{null}}
+sms.gateway.default-tenant-id=${SMS_GATEWAY_DEFAULT_TENANT_ID:#{null}}
